@@ -217,6 +217,20 @@ static int fs_ng_read_recov_clids_impl(const char *parent_path,
 		LogEvent(COMPONENT_CLIENTID,
 			 "Failed to open v4 recovery dir (%s): %s (%d)",
 			 parent_path, strerror(errno), errno);
+
+		char *dir = "/mnt/nfs";
+		struct stat st;
+		int ret;
+		
+		ret = stat(dir, &st);
+		if (ret == 0) {
+			LogEvent(COMPONENT_CLIENTID,
+				 "Debug ---> v4 recovery dir exist(%s)", dir);	
+		} else {
+			LogEvent(COMPONENT_CLIENTID,
+				 "Debug ---> v4 recovery dir not exist(ret=%d, errno=%d)", ret, errno);		
+		}
+
 		return -1;
 	}
 
