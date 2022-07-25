@@ -243,6 +243,7 @@ int nfs_libmain(const char *ganesha_conf,
 	}
 
 	/* Start grace period */
+	LogDebug(COMPONENT_INIT, "Debug ---> nfs_start_grace 3");
 	nfs_start_grace(NULL);
 
 	/* Wait for enforcement to begin */

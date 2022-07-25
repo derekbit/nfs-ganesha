@@ -359,6 +359,7 @@ static void rados_cluster_maybe_start_grace(void)
 	}
 
 	/* Start a new grace period */
+	LogDebug(COMPONENT_INIT, "Debug ---> nfs_start_grace 5");
 	nfs_start_grace(&gsp);
 }
 

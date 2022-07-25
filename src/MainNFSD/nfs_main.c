@@ -492,6 +492,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Start grace period */
+	LogDebug(COMPONENT_INIT, "Debug ---> nfs_start_grace 1");
 	nfs_start_grace(NULL);
 
 	/* Wait for enforcement to begin */

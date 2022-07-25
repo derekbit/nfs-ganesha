@@ -335,6 +335,8 @@ int nfs_start_grace(nfs_grace_start_t *gsp)
 	 * clid database. Don't load it however if we're extending the
 	 * existing grace period.
 	 */
+	LogDebug(COMPONENT_CLIENTID, "Debug ---> gsp=%p was_grace=%d", gsp, was_grace);
+
 	if (!gsp && !was_grace) {
 		nfs4_cleanup_clid_entries();
 		nfs4_recovery_load_clids(NULL);
@@ -568,6 +570,7 @@ void nfs_wait_for_grace_enforcement(void)
 						&timeo);
 
 		pthread_mutex_unlock(&enforcing_mutex);
+		LogDebug(COMPONENT_INIT, "Debug ---> nfs_start_grace 4");
 		nfs_start_grace(&gsp);
 		nfs_try_lift_grace();
 		pthread_mutex_lock(&enforcing_mutex);
@@ -661,6 +664,8 @@ void  nfs4_chk_clid_impl(nfs_client_id_t *clientid, clid_entry_t **clid_ent_arg)
 
 	LogDebug(COMPONENT_CLIENTID, "chk for %" PRIu64,
 		 clientid->cid_clientid);
+
+	LogDebug(COMPONENT_CLIENTID, "Debug ---> clid_count=%d", clid_count);
 
 	/* If there were no clients at time of restart, we're done */
 	if (clid_count == 0)
