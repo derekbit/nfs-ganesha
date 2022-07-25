@@ -126,8 +126,8 @@ static void fs_create_clid_name(nfs_client_id_t *clientid)
 
 		/* Can't overrun and shouldn't return EOVERFLOW or EINVAL */
 		(void) snprintf(clientid->cid_recov_tag, total_size,
-				"%s-(%s:%s)",
-				str_client_addr, cidstr_lenx, cidstr);
+				"dontcareaddr-(%s:%s)",
+				cidstr_lenx, cidstr);
 	}
 
 	LogDebug(COMPONENT_CLIENTID, "Created client name [%s]",
