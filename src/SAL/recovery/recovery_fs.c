@@ -693,8 +693,6 @@ static int fs_read_recov_clids_impl(const char *parent_path,
 		 * hierarchy  that represent the current clientid
 		 */
 		if (!takeover) {
-			LogDebug(COMPONENT_CLIENTID,
-			         "Debug ---> rmdir3 path=%s", path);	
 			rc = rmdir(sub_path);
 			if (rc == -1) {
 				LogEvent(COMPONENT_CLIENTID,
