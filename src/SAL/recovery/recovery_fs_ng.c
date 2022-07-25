@@ -464,6 +464,8 @@ static void fs_ng_swap_recov_dir(void)
 
 	/* now clean up old path, if any */
 	if (old_path) {
+		LogEvent(COMPONENT_CLIENTID,
+				 "Debug ---> fs_clean_old_recov_dir_impl old_path=%s", old_path);		
 		fs_clean_old_recov_dir_impl(old_path);
 		rmdir(old_path);
 	}

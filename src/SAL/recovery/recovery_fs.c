@@ -383,6 +383,9 @@ static void fs_rm_clid_impl(int position,
 			recov_dir, len,
 			path, total_len - 1);
 
+	LogDebug(COMPONENT_CLIENTID,
+			 "Debug ---> rmdir1 path=%s", path);	
+
 	err = rmdir(path);
 	if (err == -1) {
 		LogEvent(COMPONENT_CLIENTID,
@@ -690,6 +693,8 @@ static int fs_read_recov_clids_impl(const char *parent_path,
 		 * hierarchy  that represent the current clientid
 		 */
 		if (!takeover) {
+			LogDebug(COMPONENT_CLIENTID,
+			         "Debug ---> rmdir3 path=%s", path);	
 			rc = rmdir(sub_path);
 			if (rc == -1) {
 				LogEvent(COMPONENT_CLIENTID,
@@ -851,6 +856,8 @@ void fs_clean_old_recov_dir_impl(char *parent_path)
 			/* This is a directory, we need process files in it! */
 			fs_clean_old_recov_dir_impl(path);
 
+			LogDebug(COMPONENT_CLIENTID,
+			 		 "Debug ---> rmdir2 path=%s", path);	
 			rc = rmdir(path);
 
 			if (rc == -1) {
