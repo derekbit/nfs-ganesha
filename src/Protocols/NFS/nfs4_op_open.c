@@ -126,6 +126,8 @@ static nfsstat4 open4_validate_claim(compound_data_t *data,
 	bool take_ref = !op_ctx->fsal_export->exp_ops.fs_supports(
 					op_ctx->fsal_export, fso_grace_method);
 
+	LogDebug(COMPONENT_NFS_V4, "Debug ---> open4_validate_claim claim=%d", claim);
+
 	switch (claim) {
 	case CLAIM_NULL:
 		if ((data->minorversion > 0)
@@ -168,6 +170,8 @@ static nfsstat4 open4_validate_claim(compound_data_t *data,
 		status = NFS4ERR_INVAL;
 	}
 
+	LogDebug(COMPONENT_NFS_V4, "Debug ---> open4_validate_claim status=%d", status);
+
 	if (status == NFS4_OK) {
 		if (take_ref) {
 			if (nfs_get_grace_status(want_grace)) {
@@ -179,6 +183,9 @@ static nfsstat4 open4_validate_claim(compound_data_t *data,
 		} else {
 			*grace_ref = false;
 		}
+
+		LogDebug(COMPONENT_NFS_V4, "Debug ---> open4_validate_claim grace_ref=%d", *grace_ref);
+		LogDebug(COMPONENT_NFS_V4, "Debug ---> open4_validate_claim status2=%d", status);
 	}
 	return status;
 }
