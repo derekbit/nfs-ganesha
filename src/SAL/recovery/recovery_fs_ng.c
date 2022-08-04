@@ -100,6 +100,11 @@ static int fs_ng_create_recov_dir(void)
 	char *newdir;
 	char host[NI_MAXHOST];
 
+	LogEvent(COMPONENT_CLIENTID,
+		"Debug ------> fs_ng_create_recov_dir start: root=%s, dir=%s",
+		nfs_param.nfsv4_param.recov_root,
+		nfs_param.nfsv4_param.recov_dir);
+
 	err = mkdir(nfs_param.nfsv4_param.recov_root, 0700);
 	if (err == -1 && errno != EEXIST) {
 		LogEvent(COMPONENT_CLIENTID,
@@ -181,6 +186,11 @@ static int fs_ng_create_recov_dir(void)
 
 	err = snprintf(v4_recov_dir, sizeof(v4_recov_dir), "%s.XXXXXX",
 		       v4_recov_link);
+
+
+	LogEvent(COMPONENT_CLIENTID, 
+			 "Debug ------> fs_ng_create_recov_dir start: v4_recov_dir=%s",
+			 v4_recov_dir);
 
 	if (unlikely(err >= sizeof(v4_recov_dir))) {
 		LogCrit(COMPONENT_CLIENTID,
@@ -349,6 +359,9 @@ static void fs_ng_read_recov_clids_recover(add_clid_entry_hook add_clid_entry,
 {
 	int rc;
 
+	LogEvent(COMPONENT_CLIENTID,
+			 "Debug ------> fs_ng_read_recov_clids_recover start");
+
 	rc = fs_ng_read_recov_clids_impl(v4_recov_link, NULL,
 				      add_clid_entry,
 				      add_rfh_entry);
@@ -371,6 +384,8 @@ static void fs_ng_read_recov_clids(nfs_grace_start_t *gsp,
 {
 	int rc;
 	char path[PATH_MAX];
+
+	LogEvent(COMPONENT_CLIENTID, "Debug ------> fs_ng_read_recov_clids: gsp=%p", gsp);
 
 	if (!gsp) {
 		fs_ng_read_recov_clids_recover(add_clid_entry, add_rfh_entry);

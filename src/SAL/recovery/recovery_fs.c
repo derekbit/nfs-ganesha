@@ -270,6 +270,9 @@ void fs_add_clid(nfs_client_id_t *clientid)
 	int length, position;
 	int pathpos = strlen(v4_recov_dir);
 
+	LogEvent(COMPONENT_CLIENTID,
+			 "Debug ------> fs_add_clid");
+
 	fs_create_clid_name(clientid);
 
 	/* break clientid down if it is greater than max dir name */
@@ -425,6 +428,9 @@ static void fs_rm_clid_impl(int position,
 void fs_rm_clid(nfs_client_id_t *clientid)
 {
 	char *recov_dir = clientid->cid_recov_tag;
+
+	LogEvent(COMPONENT_CLIENTID,
+			 "Debug ------> fs_rm_clid");
 
 	if (recov_dir == NULL)
 		return;
