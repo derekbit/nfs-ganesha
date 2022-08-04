@@ -277,7 +277,7 @@ void fs_add_clid(nfs_client_id_t *clientid)
 
 
 	LogEvent(COMPONENT_CLIENTID,
-			 "Debug ------> fs_add_clid: cid_recov_tag=%s", client->cid_recov_tag);
+			 "Debug ------> fs_add_clid: cid_recov_tag=%s", clientid->cid_recov_tag);
 
 	/* break clientid down if it is greater than max dir name */
 	/* and create a directory hierarchy to represent the clientid. */
