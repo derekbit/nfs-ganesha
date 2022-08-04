@@ -275,9 +275,16 @@ void fs_add_clid(nfs_client_id_t *clientid)
 
 	fs_create_clid_name(clientid);
 
+
+	LogEvent(COMPONENT_CLIENTID,
+			 "Debug ------> fs_add_clid: cid_recov_tag=%s", client->cid_recov_tag);
+
 	/* break clientid down if it is greater than max dir name */
 	/* and create a directory hierarchy to represent the clientid. */
 	memcpy(path, v4_recov_dir, pathpos + 1);
+
+	LogEvent(COMPONENT_CLIENTID,
+			 "Debug ------> fs_add_clid: path=%s", path);
 
 	length = strlen(clientid->cid_recov_tag);
 
@@ -300,6 +307,8 @@ void fs_add_clid(nfs_client_id_t *clientid)
 			memcpy(path + pathpos,
 			       clientid->cid_recov_tag + position,
 			       len + 1);
+			LogEvent(COMPONENT_CLIENTID,
+			 		 "Debug ------> fs_add_clid: mkdir path1=%s", path);
 			err = mkdir(path, 0700);
 			break;
 		}
@@ -311,7 +320,8 @@ void fs_add_clid(nfs_client_id_t *clientid)
 		       NAME_MAX);
 		pathpos += NAME_MAX;
 		path[pathpos] = '\0';
-
+		LogEvent(COMPONENT_CLIENTID,
+			 	 "Debug ------> fs_add_clid: mkdir path2=%s", path);
 		err = mkdir(path, 0700);
 		if (err == -1 && errno != EEXIST)
 			break;
