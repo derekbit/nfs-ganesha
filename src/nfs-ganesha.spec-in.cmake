@@ -134,6 +134,7 @@ BuildRequires:	systemd-rpm-macros
 BuildRequires:	libcap-devel
 BuildRequires:	libblkid-devel
 BuildRequires:	libuuid-devel
+BuildRequires:	libcurl-devel
 %if %{with mspac_support}
 BuildRequires:	libwbclient-devel
 %endif

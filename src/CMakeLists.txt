@@ -1182,6 +1182,9 @@ if (NOT LIBURCU_INC)
 endif(NOT LIBURCU_INC)
 check_symbol_exists(urcu_ref_get_unless_zero urcu/ref.h HAVE_URCU_REF_GET_UNLESS_ZERO)
 
+check_include_files("curl/curl.h" HAVE_LIBCURL_H)
+find_library(LIBCURL_LIB curl)  # Management of Capabilities
+
 # All the plumbing in the basement
 set(SYSTEM_LIBRARIES
   ${NTIRPC_LIBRARY}
@@ -1190,6 +1193,7 @@ set(SYSTEM_LIBRARIES
   ${KRB5_LIBRARIES}
   ${CMAKE_THREAD_LIBS_INIT}
   ${LIBURCU_LIB}
+  ${LIBCURL_LIB}
 )
 
 include_directories(${LIBURCU_INC})
