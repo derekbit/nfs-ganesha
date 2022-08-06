@@ -34,7 +34,7 @@
 #include "recovery_fs.h"
 #include <libgen.h>
 #include <curl/curl.h>
-#include <json/json.h>
+#include <json-c/json.h>
 
 #define VERSION_BYTES 8
 #define LONGHORN_RECOVERY_BACKEND_URL "http://longhorn-recovery-backend:9600/v1/recoverybackend"
