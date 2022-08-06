@@ -35,6 +35,11 @@
 #include <libgen.h>
 #include <curl/curl.h>
 
+#define VERSION_BYTES 8
+#define LONGHORN_RECOVERY_BACKEND_URL "http://longhorn-recovery-backend:9600/v1/recoverybackend"
+
+static char v4_recov_version[NAME_MAX];
+
 typedef enum {
 	HTTP_GET = 0,
 	HTTP_POST,
@@ -47,8 +52,25 @@ struct http_result {
 	size_t size;
 };
 
+static char *generate_random_string(const int len)
+{
+	static const char alphanum[] =
+		"0123456789"
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+	char *buf;
 
-static char v4_recov_version[NAME_MAX];
+	buf = malloc(len + 1);
+	if (!buf) {
+		return NULL;
+	}
+
+	for (int i = 0; i < len; ++i) {
+		buf[i] = alphanum[rand() % (sizeof(alphanum) - 1)];
+	}
+
+	buf[len] = '\0';
+	return buf;
+}
 
 static size_t callback_write_result(void *contents, size_t size, size_t nmemb, void *userp) {
 	char *buf = NULL;
@@ -245,20 +267,207 @@ error:
 	return result;
 }
 
+/**
+ * @brief convert clientid opaque bytes as a hex string for mkdir purpose.
+ *
+ * @param[in,out] dspbuf The buffer.
+ * @param[in]     value  The bytes to display
+ * @param[in]     len    The number of bytes to display
+ *
+ * @return the bytes remaining in the buffer.
+ *
+ */
+static int fs_convert_opaque_value_max_for_dir(struct display_buffer *dspbuf,
+					       void *value,
+					       int len,
+					       int max)
+{
+	unsigned int i = 0;
+	int          b_left = display_start(dspbuf);
+	int          cpy = len;
+
+	if (b_left <= 0)
+		return 0;
+
+	/* Check that the length is ok
+	 * If the value is empty, display EMPTY value. */
+	if (len <= 0 || len > max)
+		return 0;
+
+	/* If the value is NULL, display NULL value. */
+	if (value == NULL)
+		return 0;
+
+	/* Determine if the value is entirely printable characters, */
+	/* and it contains no slash character (reserved for filename) */
+	for (i = 0; i < len; i++)
+		if ((!isprint(((char *)value)[i])) ||
+		    (((char *)value)[i] == '/'))
+			break;
+
+	if (i == len) {
+		/* Entirely printable character, so we will just copy the
+		 * characters into the buffer (to the extent there is room
+		 * for them).
+		 */
+		b_left = display_len_cat(dspbuf, value, cpy);
+	} else {
+		b_left = display_opaque_bytes(dspbuf, value, cpy);
+	}
+
+	if (b_left <= 0)
+		return 0;
+
+	return b_left;
+}
+
+/**
+ * @brief generate a name that identifies this client
+ *
+ * This name will be used to know that a client was talking to the
+ * server before a restart so that it will be allowed to do reclaims
+ * during grace period.
+ *
+ * @param[in] clientid Client record
+ */
+static void longhorn_create_clid_name(nfs_client_id_t *clientid)
+{
+	nfs_client_record_t *cl_rec = clientid->cid_client_record;
+	const char *str_client_addr = "(unknown)";
+	char cidstr[PATH_MAX] = { 0, };
+	struct display_buffer dspbuf = {sizeof(cidstr), cidstr, cidstr};
+	char cidstr_lenx[5];
+	int total_size, cidstr_lenx_len, cidstr_len, str_client_addr_len;
+
+	/* get the caller's IP addr */
+	if (clientid->gsh_client != NULL)
+		str_client_addr = clientid->gsh_client->hostaddr_str;
+
+	if (fs_convert_opaque_value_max_for_dir(&dspbuf,
+						cl_rec->cr_client_val,
+						cl_rec->cr_client_val_len,
+						PATH_MAX) > 0) {
+		cidstr_len = strlen(cidstr);
+		str_client_addr_len = strlen(str_client_addr);
+
+		/* fs_convert_opaque_value_max_for_dir does not prefix
+		 * the "(<length>:". So we need to do it here */
+		cidstr_lenx_len = snprintf(cidstr_lenx, sizeof(cidstr_lenx),
+					   "%d", cidstr_len);
+
+		if (unlikely(cidstr_lenx_len >= sizeof(cidstr_lenx) ||
+			     cidstr_lenx_len < 0)) {
+			/* cidrstr can at most be PATH_MAX or 1024, so at most
+			 * 4 characters plus NUL are necessary, so we won't
+			 * overrun, nor can we get a -1 with EOVERFLOW or EINVAL
+			 */
+			LogFatal(COMPONENT_CLIENTID,
+				 "snprintf returned unexpected %d",
+				 cidstr_lenx_len);
+		}
+
+		total_size = cidstr_len + str_client_addr_len + 5 +
+			     cidstr_lenx_len;
+
+		/* hold both long form clientid and IP */
+		clientid->cid_recov_tag = gsh_malloc(total_size);
+
+		/* Can't overrun and shouldn't return EOVERFLOW or EINVAL */
+		(void) snprintf(clientid->cid_recov_tag, total_size,
+				"%s-(%s:%s)",
+				str_client_addr, cidstr_lenx, cidstr);
+	}
+
+	LogDebug(COMPONENT_CLIENTID, "Created client name [%s]",
+		 clientid->cid_recov_tag);
+}
+
 static int longhorn_recov_init(void)
 {
+	char host[NI_MAXHOST];
+	char payload[NI_MAXHOST << 1];
+	char *response = NULL;
+	size_t response_size = 0;
+	char *version = NULL;
+	int err = 0;
+	int res = 0;
+
+	err = gethostname(host, sizeof(host));
+	if (err) {
+		LogEvent(COMPONENT_CLIENTID,
+				 "Failed to gethostname: %s (%d)",
+				 strerror(errno), errno);
+		return -errno;
+	}
+
+	version = generate_random_string(VERSION_BYTES);
+	if (!version) {
+		LogEvent(COMPONENT_CLIENTID, "failed to generate version id: %s", strerror(errno));
+		return -errno;
+	}
+	memcpy(v4_recov_version, version, VERSION_BYTES + 1);
+
+	snprintf(payload, sizeof(payload), "{\"hostname\": \"%s\", \"version\": \"%s\"}",
+		host, version);
+
+	res = http_call(HTTP_POST, LONGHORN_RECOVERY_BACKEND_URL,
+		payload, strlen(payload) + 1,
+		&response, &response_size);
+	if (res != 0) {
+		return -EINVAL;
+	}
+
 	return 0;
 }
 
 static void longhorn_recov_end_grace(void)
 {
-	return;
+	char host[NI_MAXHOST];
+	char url[PATH_MAX];
+	char payload[NI_MAXHOST << 1];
+	char *response = NULL;
+	size_t response_size = 0;
+	int err = 0;
+
+	err = gethostname(host, sizeof(host));
+	if (err) {
+		LogEvent(COMPONENT_CLIENTID,
+				 "Failed to gethostname: %s (%d)",
+				 strerror(errno), errno);
+		return;
+	}
+
+	snprintf(url, sizeof(url), "%s/%s", LONGHORN_RECOVERY_BACKEND_URL, host);
+	snprintf(payload, sizeof(payload), "{}");
+
+	http_call(HTTP_PUT, url, payload, strlen(payload) + 1, &response, &response_size);
 }
 
 static void longhorn_add_clid(nfs_client_id_t *clientid)
 {
-}
+	char host[NI_MAXHOST];
+	char url[PATH_MAX];
+	char payload[NI_MAXHOST << 1];
+	char *response = NULL;
+	size_t response_size = 0;
+	int err = 0;
 
+	err = gethostname(host, sizeof(host));
+	if (err) {
+		LogEvent(COMPONENT_CLIENTID,
+				 "Failed to gethostname: %s (%d)",
+				 strerror(errno), errno);
+		return;
+	}
+
+	longhorn_create_clid_name(clientid);
+
+	snprintf(url, sizeof(url), "%s/%s/%s",
+		LONGHORN_RECOVERY_BACKEND_URL, host, clientid->cid_recov_tag);
+	snprintf(payload, sizeof(payload), "{}");
+
+	http_call(HTTP_PUT, url, payload, strlen(payload) + 1, &response, &response_size);
+}
 
 static void longhorn_rm_clid(nfs_client_id_t *clientid)
 {
