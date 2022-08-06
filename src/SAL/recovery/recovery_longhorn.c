@@ -587,7 +587,7 @@ static int read_clids(char *response, add_clid_entry_hook add_clid_entry)
         struct json_object *obj = NULL, *clients_obj = NULL;
 		size_t num_clids = 0;
 		
-		obj = json_tokener_parse(data);
+		obj = json_tokener_parse(response);
 		if (!obj) {
 			LogEvent(COMPONENT_CLIENTID,
 					 "Failed to parse \"%s\": %s",
@@ -606,7 +606,7 @@ static int read_clids(char *response, add_clid_entry_hook add_clid_entry)
 		num_clids = json_object_array_length(clients_obj);
 		for (size_t i = 0; i < num_clids; i++) {
         	struct json_object *obj = NULL;
-			char *clid = NULL;
+			const char *clid = NULL;
 			clid_entry_t *ent = NULL;
 			
 			obj = json_object_array_get_idx(clients_obj, i);
@@ -659,7 +659,7 @@ static void longhorn_read_recov_clids(nfs_grace_start_t *gsp,
 	http_call(HTTP_GET, url, payload, strlen(payload) + 1, &response, &response_size);
 	LogEvent(COMPONENT_CLIENTID, "response from recovery backend service: %s", response);
 
-	read_clids(response)
+	read_clids(response, add_clid_entry);
 }
 
 static void longhorn_add_revoke_fh(nfs_client_id_t *delr_clid, nfs_fh4 *delr_handle)
