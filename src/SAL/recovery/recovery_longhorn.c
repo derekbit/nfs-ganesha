@@ -591,7 +591,7 @@ static int read_clids(char *response, add_clid_entry_hook add_clid_entry)
 		if (!obj) {
 			LogEvent(COMPONENT_CLIENTID,
 					 "Failed to parse \"%s\": %s",
-					 data, strerror(errno));
+					 response, strerror(errno));
 			return -1;
 		}
 
@@ -618,7 +618,7 @@ static int read_clids(char *response, add_clid_entry_hook add_clid_entry)
 			}
 
         	clid = json_object_get_string(obj);
-			ent = add_clid_entry(clid);
+			ent = add_clid_entry((char *)clid);
 			LogEvent(COMPONENT_CLIENTID,
 					 "added %s to clid list",
 					 ent->cl_name);
