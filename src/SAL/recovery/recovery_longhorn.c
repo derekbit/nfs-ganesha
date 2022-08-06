@@ -267,6 +267,72 @@ error:
 	return result;
 }
 
+/* Maps special characters in a URL to their equivalent % codes. */
+static const char url_code_map[256][4] = {
+	"",    "%01", "%02", "%03", "%04", "%05", "%06", "%07", "%08", "%09",
+	"%0A", "%0B", "%0C", "%0D", "%0E", "%0F", "%10", "%11", "%12", "%13",
+	"%14", "%15", "%16", "%17", "%18", "%19", "%1A", "%1B", "%1C", "%1D",
+	"%1E", "%1F", "%20", "%21", "%22", "%23", "%24", "%25", "%26", "%27",
+	"%28", "%29", "",    "%2B", "%2C", "",    "",    "%2F", "",    "",
+	"",    "",    "",    "",    "",    "",    "",    "",    "%3A", "%3B",
+	"%3C", "%3D", "%3E", "%3F", "",    "",    "",    "",    "",    "",
+	"",    "",    "",    "",    "",    "",    "",    "",    "",    "",
+	"",    "",    "",    "",    "",    "",    "",    "",    "",    "",
+	"",    "%5B", "%5C", "%5D", "%5E", "",    "%60", "",    "",    "",
+	"",    "",    "",    "",    "",    "",    "",    "",    "",    "",
+	"",    "",    "",    "",    "",    "",    "",    "",    "",    "",
+	"",    "",    "",    "%7B", "%7C", "%7D", "%7E", "%7F", "%80", "%81",
+	"%82", "%83", "%84", "%85", "%86", "%87", "%88", "%89", "%8A", "%8B",
+	"%8C", "%8D", "%8E", "%8F", "%90", "%91", "%92", "%93", "%94", "%95",
+	"%96", "%97", "%98", "%99", "%9A", "%9B", "%9C", "%9D", "%9E", "%9F",
+	"%A0", "%A1", "%A2", "%A3", "%A4", "%A5", "%A6", "%A7", "%A8", "%A9",
+	"%AA", "%AB", "%AC", "%AD", "%AE", "%AF", "%B0", "%B1", "%B2", "%B3",
+	"%B4", "%B5", "%B6", "%B7", "%B8", "%B9", "%BA", "%BB", "%BC", "%BD",
+	"%BE", "%BF", "%C0", "%C1", "%C2", "%C3", "%C4", "%C5", "%C6", "%C7",
+	"%C8", "%C9", "%CA", "%CB", "%CC", "%CD", "%CE", "%CF", "%D0", "%D1",
+	"%D2", "%D3", "%D4", "%D5", "%D6", "%D7", "%D8", "%D9", "%DA", "%DB",
+	"%DC", "%DD", "%DE", "%DF", "%E0", "%E1", "%E2", "%E3", "%E4", "%E5",
+	"%E6", "%E7", "%E8", "%E9", "%EA", "%EB", "%EC", "%ED", "%EE", "%EF",
+	"%F0", "%F1", "%F2", "%F3", "%F4", "%F5", "%F6", "%F7", "%F8", "%F9",
+	"%FA", "%FB", "%FC", "%FD", "%FE", "%FF"
+};
+
+char *url_encode(const char *s)
+{
+	char * buf;
+	size_t buf_size;
+
+	if (!s) {
+		return NULL;
+	}
+
+	/* each input char can expand to at most 3 chars */
+	buf_size = (strlen(s) * 3) + 1;
+	buf = (char *) malloc(buf_size);
+
+	if (buf) {
+		char c;
+		char * p = buf;
+		
+		while((c = *s++) != '\0') {
+			const char *replace_with = url_code_map[(unsigned char) c];
+			if (*replace_with != '\0') {
+				const size_t bytes_written = (size_t)(p - buf);
+				//assert(bytes_written < buf_size);
+				p += strlcpy(p, replace_with, buf_size - bytes_written);
+			} else {
+				*p++ = c;
+			}
+		}
+
+		*p = '\0';
+
+		//assert(strlen(buf) < buf_size);
+	}
+
+	return(buf);
+}
+
 /**
  * @brief convert clientid opaque bytes as a hex string for mkdir purpose.
  *
@@ -374,8 +440,8 @@ static void longhorn_create_clid_name(nfs_client_id_t *clientid)
 
 		/* Can't overrun and shouldn't return EOVERFLOW or EINVAL */
 		(void) snprintf(clientid->cid_recov_tag, total_size,
-				"%s-(%s:%s)",
-				str_client_addr, cidstr_lenx, cidstr);
+				"%s:%s",
+				cidstr_lenx, cidstr);
 	}
 
 	LogDebug(COMPONENT_CLIENTID, "Created client name [%s]",
@@ -456,6 +522,7 @@ static void longhorn_add_clid(nfs_client_id_t *clientid)
 	char payload[NI_MAXHOST << 1];
 	char *response = NULL;
 	size_t response_size = 0;
+	char *encoded_cid_recov_tag = NULL;
 	int err = 0;
 
 	err = gethostname(host, sizeof(host));
@@ -467,13 +534,14 @@ static void longhorn_add_clid(nfs_client_id_t *clientid)
 	}
 
 	longhorn_create_clid_name(clientid);
+	encoded_cid_recov_tag = url_encode(clientid->cid_recov_tag);
 
 	LogEvent(COMPONENT_CLIENTID,
-			 "Add client %s to server host %s",
-			 clientid->cid_recov_tag, host);
+			 "Add client %s to server host %s (%s)",
+			 clientid->cid_recov_tag, host, encoded_cid_recov_tag);
 
 	snprintf(url, sizeof(url), "%s/%s/%s",
-		LONGHORN_RECOVERY_BACKEND_URL, host, clientid->cid_recov_tag);
+		LONGHORN_RECOVERY_BACKEND_URL, host, encoded_cid_recov_tag);
 
 	snprintf(payload, sizeof(payload), "{}");
 
