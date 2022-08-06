@@ -552,16 +552,40 @@ static void longhorn_rm_clid(nfs_client_id_t *clientid)
 {
 }
 
-
 static void longhorn_read_recov_clids(nfs_grace_start_t *gsp,
 				  add_clid_entry_hook add_clid_entry,
 				  add_rfh_entry_hook add_rfh_entry)
 {
+	char host[NI_MAXHOST];
+	char url[PATH_MAX];
+	char payload[NI_MAXHOST << 1];
+	char *response = NULL;
+	size_t response_size = 0;
+	int err = 0;
+
+	err = gethostname(host, sizeof(host));
+	if (err) {
+		LogEvent(COMPONENT_CLIENTID,
+				 "Failed to gethostname: %s (%d)",
+				 strerror(errno), errno);
+		return;
+	}
+
+	LogEvent(COMPONENT_CLIENTID,
+			 "Read clients from recovery backend %s",
+			 host);
+
+	snprintf(url, sizeof(url), "%s/%s",
+		LONGHORN_RECOVERY_BACKEND_URL, host);
+
+	snprintf(payload, sizeof(payload), "{}");
+
+	http_call(HTTP_GET, url, payload, strlen(payload) + 1, &response, &response_size);
+	LogEvent(COMPONENT_CLIENTID, "response from recovery backend service: %s", response);
 }
 
 static void longhorn_add_revoke_fh(nfs_client_id_t *delr_clid, nfs_fh4 *delr_handle)
 {
-
 }
 
 static struct nfs4_recovery_backend longhorn_backend = {
