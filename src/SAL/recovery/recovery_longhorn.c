@@ -551,6 +551,81 @@ static void longhorn_add_clid(nfs_client_id_t *clientid)
 
 static void longhorn_rm_clid(nfs_client_id_t *clientid)
 {
+	char host[NI_MAXHOST];
+	char url[PATH_MAX];
+	char payload[NI_MAXHOST << 1];
+	char *response = NULL;
+	size_t response_size = 0;
+	char *encoded_cid_recov_tag = NULL;
+	int err = 0;
+
+	err = gethostname(host, sizeof(host));
+	if (err) {
+		LogEvent(COMPONENT_CLIENTID,
+				 "Failed to gethostname: %s (%d)",
+				 strerror(errno), errno);
+		return;
+	}
+
+	encoded_cid_recov_tag = url_encode(clientid->cid_recov_tag);
+	clientid->cid_recov_tag = NULL;
+
+	LogEvent(COMPONENT_CLIENTID,
+			 "Remove client %s from server host %s (%s)",
+			 clientid->cid_recov_tag, host, encoded_cid_recov_tag);
+
+	snprintf(url, sizeof(url), "%s/%s/%s",
+		LONGHORN_RECOVERY_BACKEND_URL, host, encoded_cid_recov_tag);
+
+	snprintf(payload, sizeof(payload), "{}");
+
+	http_call(HTTP_DELETE, url, payload, strlen(payload) + 1, &response, &response_size);
+}
+
+static int read_clids(char *response, add_clid_entry_hook add_clid_entry)
+{
+        struct json_object *obj = NULL, *clients_obj = NULL;
+		size_t num_clids = 0;
+		
+		obj = json_tokener_parse(data);
+		if (!obj) {
+			LogEvent(COMPONENT_CLIENTID,
+					 "Failed to parse \"%s\": %s",
+					 data, strerror(errno));
+			return -1;
+		}
+
+		clients_obj = json_object_object_get(obj, "clients");
+		if (!clients_obj) {
+			LogEvent(COMPONENT_CLIENTID,
+					 "Failed to parse get clients object: %s",
+					 strerror(errno));
+			return -1;
+		}
+
+		num_clids = json_object_array_length(clients_obj);
+		for (size_t i = 0; i < num_clids; i++) {
+        	struct json_object *obj = NULL;
+			char *clid = NULL;
+			clid_entry_t *ent = NULL;
+			
+			obj = json_object_array_get_idx(clients_obj, i);
+			if (!obj) {
+				LogEvent(COMPONENT_CLIENTID,
+						 "Failed to parse get client object: %s",
+						 strerror(errno));
+				return -1;
+			}
+
+        	clid = json_object_get_string(obj);
+			ent = add_clid_entry(clid);
+			LogEvent(COMPONENT_CLIENTID,
+					 "added %s to clid list",
+					 ent->cl_name);
+		}
+
+		json_object_put(obj);
+		return 0;
 }
 
 static void longhorn_read_recov_clids(nfs_grace_start_t *gsp,
@@ -583,6 +658,8 @@ static void longhorn_read_recov_clids(nfs_grace_start_t *gsp,
 
 	http_call(HTTP_GET, url, payload, strlen(payload) + 1, &response, &response_size);
 	LogEvent(COMPONENT_CLIENTID, "response from recovery backend service: %s", response);
+
+	read_clids(response)
 }
 
 static void longhorn_add_revoke_fh(nfs_client_id_t *delr_clid, nfs_fh4 *delr_handle)
