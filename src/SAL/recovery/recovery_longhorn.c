@@ -277,7 +277,7 @@ error:
  * @return the bytes remaining in the buffer.
  *
  */
-static int fs_convert_opaque_value_max_for_dir(struct display_buffer *dspbuf,
+static int longhorn_convert_opaque_value_max_for_dir(struct display_buffer *dspbuf,
 					       void *value,
 					       int len,
 					       int max)
@@ -343,14 +343,14 @@ static void longhorn_create_clid_name(nfs_client_id_t *clientid)
 	if (clientid->gsh_client != NULL)
 		str_client_addr = clientid->gsh_client->hostaddr_str;
 
-	if (fs_convert_opaque_value_max_for_dir(&dspbuf,
+	if (longhorn_convert_opaque_value_max_for_dir(&dspbuf,
 						cl_rec->cr_client_val,
 						cl_rec->cr_client_val_len,
 						PATH_MAX) > 0) {
 		cidstr_len = strlen(cidstr);
 		str_client_addr_len = strlen(str_client_addr);
 
-		/* fs_convert_opaque_value_max_for_dir does not prefix
+		/* longhorn_convert_opaque_value_max_for_dir does not prefix
 		 * the "(<length>:". So we need to do it here */
 		cidstr_lenx_len = snprintf(cidstr_lenx, sizeof(cidstr_lenx),
 					   "%d", cidstr_len);
@@ -400,6 +400,8 @@ static int longhorn_recov_init(void)
 		return -errno;
 	}
 
+	LogEvent(COMPONENT_CLIENTID, "Initialize recovery backend for server host %s", host);
+
 	version = generate_random_string(VERSION_BYTES);
 	if (!version) {
 		LogEvent(COMPONENT_CLIENTID, "failed to generate version id: %s", strerror(errno));
@@ -408,7 +410,7 @@ static int longhorn_recov_init(void)
 	memcpy(v4_recov_version, version, VERSION_BYTES + 1);
 
 	snprintf(payload, sizeof(payload), "{\"hostname\": \"%s\", \"version\": \"%s\"}",
-		host, version);
+		host, v4_recov_version);
 
 	res = http_call(HTTP_POST, LONGHORN_RECOVERY_BACKEND_URL,
 		payload, strlen(payload) + 1,
@@ -437,8 +439,12 @@ static void longhorn_recov_end_grace(void)
 		return;
 	}
 
+	LogEvent(COMPONENT_CLIENTID,
+			 "End grace for server host %s with version %s",
+			 host, v4_recov_version);
+
 	snprintf(url, sizeof(url), "%s/%s", LONGHORN_RECOVERY_BACKEND_URL, host);
-	snprintf(payload, sizeof(payload), "{}");
+	snprintf(payload, sizeof(payload), "{\"version\": \"%s\"}", v4_recov_version);
 
 	http_call(HTTP_PUT, url, payload, strlen(payload) + 1, &response, &response_size);
 }
@@ -462,8 +468,13 @@ static void longhorn_add_clid(nfs_client_id_t *clientid)
 
 	longhorn_create_clid_name(clientid);
 
+	LogEvent(COMPONENT_CLIENTID,
+			 "Add client %s to server host %s",
+			 clientid->cid_recov_tag, host);
+
 	snprintf(url, sizeof(url), "%s/%s/%s",
 		LONGHORN_RECOVERY_BACKEND_URL, host, clientid->cid_recov_tag);
+
 	snprintf(payload, sizeof(payload), "{}");
 
 	http_call(HTTP_PUT, url, payload, strlen(payload) + 1, &response, &response_size);
