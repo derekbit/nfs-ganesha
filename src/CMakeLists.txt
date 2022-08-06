@@ -1182,8 +1182,11 @@ if (NOT LIBURCU_INC)
 endif(NOT LIBURCU_INC)
 check_symbol_exists(urcu_ref_get_unless_zero urcu/ref.h HAVE_URCU_REF_GET_UNLESS_ZERO)
 
-check_include_files("curl/curl.h" HAVE_LIBCURL_H)
-find_library(LIBCURL_LIB curl)  # Management of Capabilities
+find_path(LIBCURL_INC curl/curl.h)
+find_library(LIBCURL_LIB curl)
+
+find_path(LIBJSONC_INC json/json.h)
+FIND_LIBRARY(LIBJSONC_LIB json-c json)
 
 # All the plumbing in the basement
 set(SYSTEM_LIBRARIES

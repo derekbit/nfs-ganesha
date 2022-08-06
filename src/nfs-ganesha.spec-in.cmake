@@ -135,6 +135,7 @@ BuildRequires:	libcap-devel
 BuildRequires:	libblkid-devel
 BuildRequires:	libuuid-devel
 BuildRequires:	libcurl-devel
+BuildRequires:	libjson-c-devel
 %if %{with mspac_support}
 BuildRequires:	libwbclient-devel
 %endif
