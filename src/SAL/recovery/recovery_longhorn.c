@@ -539,7 +539,7 @@ static void longhorn_add_clid(nfs_client_id_t *clientid)
 
 	LogEvent(COMPONENT_CLIENTID,
 			 "Add client %s to server host %s with version %s",
-			 clientid->cid_recov_tag, host, encoded_cid_recov_tag, v4_recov_version);
+			 clientid->cid_recov_tag, host, v4_recov_version);
 
 	snprintf(url, sizeof(url), "%s/%s/%s",
 		LONGHORN_RECOVERY_BACKEND_URL, host, encoded_cid_recov_tag);
