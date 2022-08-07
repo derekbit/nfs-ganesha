@@ -543,8 +543,7 @@ static void longhorn_add_clid(nfs_client_id_t *clientid)
 
 	snprintf(url, sizeof(url), "%s/%s/%s",
 		LONGHORN_RECOVERY_BACKEND_URL, host, encoded_cid_recov_tag);
-
-	snprintf(payload, sizeof(payload), "{}");
+	snprintf(payload, sizeof(payload), "{\"version\": \"%s\"}", v4_recov_version);
 
 	http_call(HTTP_PUT, url, payload, strlen(payload) + 1, &response, &response_size);
 }
