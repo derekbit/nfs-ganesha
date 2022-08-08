@@ -37,6 +37,8 @@
 #include <json-c/json.h>
 
 #define VERSION_BYTES 8
+#define URL_MAX       2048
+#define PAYLOAD_MAX   2048
 #define LONGHORN_RECOVERY_BACKEND_URL "http://longhorn-recovery-backend:9600/v1/recoverybackend"
 
 static char v4_recov_version[NAME_MAX];
@@ -70,14 +72,16 @@ static char *generate_random_string(const int len)
 	}
 
 	buf[len] = '\0';
+
 	return buf;
 }
 
-static size_t callback_write_result(void *contents, size_t size, size_t nmemb, void *userp) {
+static size_t callback_write_result(void *contents, size_t size, size_t nmemb, void *userp)
+{
 	char *buf = NULL;
 	size_t real_size = size * nmemb;
 
-	if (contents != NULL && userp != NULL) {
+	if (contents != NULL && userp) {
 		struct http_result *mem = (struct http_result *) userp;
 		buf = realloc(mem->memory, mem->size + real_size + 1);
 		if (buf) {
@@ -90,7 +94,8 @@ static size_t callback_write_result(void *contents, size_t size, size_t nmemb, v
 	return 0;
 }
 
-static int http_call(HTTP_METHOD method, const char *url, char *payload, size_t payload_size, char **output, size_t *output_size) {
+static int http_call(HTTP_METHOD method, const char *url, char *payload, size_t payload_size, char **output, size_t *output_size)
+{
 	int result = -1;
 	struct http_result buffer = {.memory = NULL, .size = 0};
 	CURL *handle = NULL;
@@ -100,7 +105,7 @@ static int http_call(HTTP_METHOD method, const char *url, char *payload, size_t 
 	long http_code = 0;
 
 	if (method < HTTP_GET || method > HTTP_DELETE) {
-		LogEvent(COMPONENT_CLIENTID, "invalid method: (%d)", method);
+		LogEvent(COMPONENT_CLIENTID, "Invalid method: %d", method);
 		goto error;
 	}
 
@@ -112,38 +117,38 @@ static int http_call(HTTP_METHOD method, const char *url, char *payload, size_t 
 	/* Initialize CURL handle */
 	handle = curl_easy_init();
 	if (!handle) {
-		LogEvent(COMPONENT_CLIENTID, "failed to initialize CURL");
+		LogEvent(COMPONENT_CLIENTID, "Failed to initialize CURL");
 		goto error;
 	}
 	
 	/* Set CURL options */
 	curl_result = curl_easy_setopt(handle, CURLOPT_URL, url);
 	if (curl_result != CURLE_OK) {
-		LogEvent(COMPONENT_CLIENTID, "failed to set CURL option: %s", curl_easy_strerror(curl_result));
+		LogEvent(COMPONENT_CLIENTID, "Failed to set CURL option: %s", curl_easy_strerror(curl_result));
 		goto error;
 	}
 
 	curl_result = curl_easy_setopt(handle, CURLOPT_FOLLOWLOCATION, 1L);
 	if (curl_result != CURLE_OK) {
-		LogEvent(COMPONENT_CLIENTID, "failed to set CURL option: %s", curl_easy_strerror(curl_result));
+		LogEvent(COMPONENT_CLIENTID, "Failed to set CURL option: %s", curl_easy_strerror(curl_result));
 		goto error;
 	}
 
 	curl_result = curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, callback_write_result);
 	if (curl_result != CURLE_OK) {
-		LogEvent(COMPONENT_CLIENTID, "failed to set CURL option: %s", curl_easy_strerror(curl_result));
+		LogEvent(COMPONENT_CLIENTID, "Failed to set CURL option: %s", curl_easy_strerror(curl_result));
 		goto error;
 	}
 
 	curl_result = curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void *)&buffer);
 	if (curl_result != CURLE_OK) {
-		LogEvent(COMPONENT_CLIENTID, "failed to set CURL option: %s", curl_easy_strerror(curl_result));
+		LogEvent(COMPONENT_CLIENTID, "Failed to set CURL option: %s", curl_easy_strerror(curl_result));
 		goto error;
 	}
 
 	curl_result = curl_easy_setopt(handle, CURLOPT_USERAGENT, "libcurl-agent/1.0");
 	if (curl_result != CURLE_OK) {
-		LogEvent(COMPONENT_CLIENTID, "failed to set CURL option: %s", curl_easy_strerror(curl_result));
+		LogEvent(COMPONENT_CLIENTID, "Failed to set CURL option: %s", curl_easy_strerror(curl_result));
 		goto error;
 	}
 
@@ -151,26 +156,26 @@ static int http_call(HTTP_METHOD method, const char *url, char *payload, size_t 
 		case HTTP_GET:
 			curl_result = curl_easy_setopt(handle, CURLOPT_HTTPGET, 1L);
 			if (curl_result != CURLE_OK) {
-				LogEvent(COMPONENT_CLIENTID, "failed to set CURL option: %s", curl_easy_strerror(curl_result));
+				LogEvent(COMPONENT_CLIENTID, "Failed to set CURL option: %s", curl_easy_strerror(curl_result));
 				goto error;
 			}
 			break;
 		case HTTP_POST:
 			curl_result = curl_easy_setopt(handle, CURLOPT_POST, 1L);
 			if (curl_result != CURLE_OK) {
-				LogEvent(COMPONENT_CLIENTID, "failed to set CURL option: %s", curl_easy_strerror(curl_result));
+				LogEvent(COMPONENT_CLIENTID, "Failed to set CURL option: %s", curl_easy_strerror(curl_result));
 				goto error;
 			}
 
 			curl_result = curl_easy_setopt(handle, CURLOPT_POSTFIELDS, payload);
 			if (curl_result != CURLE_OK) {
-				LogEvent(COMPONENT_CLIENTID, "failed to set CURL option: %s", curl_easy_strerror(curl_result));
+				LogEvent(COMPONENT_CLIENTID, "Failed to set CURL option: %s", curl_easy_strerror(curl_result));
 				goto error;
 			}
 
 			curl_result = curl_easy_setopt(handle, CURLOPT_POSTFIELDSIZE, payload_size);
 			if (curl_result != CURLE_OK) {
-				LogEvent(COMPONENT_CLIENTID, "failed to set CURL option: %s", curl_easy_strerror(curl_result));
+				LogEvent(COMPONENT_CLIENTID, "Failed to set CURL option: %s", curl_easy_strerror(curl_result));
 				goto error;
 			}
 
@@ -178,19 +183,19 @@ static int http_call(HTTP_METHOD method, const char *url, char *payload, size_t 
 		case HTTP_PUT:
 			curl_result = curl_easy_setopt(handle, CURLOPT_CUSTOMREQUEST, "PUT");
 			if (curl_result != CURLE_OK) {
-				LogEvent(COMPONENT_CLIENTID, "failed to set CURL option: %s", curl_easy_strerror(curl_result));
+				LogEvent(COMPONENT_CLIENTID, "Failed to set CURL option: %s", curl_easy_strerror(curl_result));
 				goto error;
 			}
 
 			curl_result = curl_easy_setopt(handle, CURLOPT_POSTFIELDS, payload);
 			if (curl_result != CURLE_OK) {
-				LogEvent(COMPONENT_CLIENTID, "failed to set CURL option: %s", curl_easy_strerror(curl_result));
+				LogEvent(COMPONENT_CLIENTID, "Failed to set CURL option: %s", curl_easy_strerror(curl_result));
 				goto error;
 			}
 
 			curl_result = curl_easy_setopt(handle, CURLOPT_POSTFIELDSIZE, payload_size);
 			if (curl_result != CURLE_OK) {
-				LogEvent(COMPONENT_CLIENTID, "failed to set CURL option: %s", curl_easy_strerror(curl_result));
+				LogEvent(COMPONENT_CLIENTID, "Failed to set CURL option: %s", curl_easy_strerror(curl_result));
 				goto error;
 			}
 
@@ -198,7 +203,7 @@ static int http_call(HTTP_METHOD method, const char *url, char *payload, size_t 
 		case HTTP_DELETE:
 			curl_result = curl_easy_setopt(handle, CURLOPT_CUSTOMREQUEST, "DELETE");
 			if (curl_result != CURLE_OK) {
-				LogEvent(COMPONENT_CLIENTID, "failed to set CURL option: %s", curl_easy_strerror(curl_result));
+				LogEvent(COMPONENT_CLIENTID, "Failed to set CURL option: %s", curl_easy_strerror(curl_result));
 				goto error;
 			}
 	}
@@ -206,38 +211,38 @@ static int http_call(HTTP_METHOD method, const char *url, char *payload, size_t 
 	/* Set HTTP headers */
 	curl_headers = curl_slist_append(curl_headers, "Accept: application/json");
 	if (!curl_headers) {
-		LogEvent(COMPONENT_CLIENTID, "failed to construct CURL headers");
+		LogEvent(COMPONENT_CLIENTID, "Failed to construct CURL headers");
 		goto error;
 	}
 
 	curl_headers = curl_slist_append(curl_headers, "Content-Type: application/json; charset=utf-8");
 	if (!curl_headers) {
-		LogEvent(COMPONENT_CLIENTID, "failed to construct CURL headers");
+		LogEvent(COMPONENT_CLIENTID, "Failed to construct CURL headers");
 		goto error;
 	}
 
 	curl_headers = curl_slist_append(curl_headers, "Connection: close");
 	if (!curl_headers) {
-		LogEvent(COMPONENT_CLIENTID, "failed to construct CURL headers");
+		LogEvent(COMPONENT_CLIENTID, "Failed to construct CURL headers");
 		goto error;
 	}
 
 	curl_result = curl_easy_setopt(handle, CURLOPT_HTTPHEADER, curl_headers);
 	if (curl_result != CURLE_OK) {
-		LogEvent(COMPONENT_CLIENTID, "failed to set CURL headers: %s", curl_easy_strerror(curl_result));
+		LogEvent(COMPONENT_CLIENTID, "Failed to set CURL headers: %s", curl_easy_strerror(curl_result));
 		goto error;
 	}
 
 	/* Make HTTP request */
 	curl_result = curl_easy_perform(handle);
 	if (curl_result != CURLE_OK) {
-		LogEvent(COMPONENT_CLIENTID, "failed to perform CURL operation: %s", curl_easy_strerror(curl_result));
+		LogEvent(COMPONENT_CLIENTID, "Failed to perform CURL operation: %s", curl_easy_strerror(curl_result));
 		goto error;
 	}
 
 	curl_result = curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &http_code);
 	if (curl_result != CURLE_OK) {
-		LogEvent(COMPONENT_CLIENTID, "failed to perform CURL operation: %s", curl_easy_strerror(curl_result));
+		LogEvent(COMPONENT_CLIENTID, "Failed to perform CURL operation: %s", curl_easy_strerror(curl_result));
 		goto error;
 	}
 
@@ -309,8 +314,8 @@ char *url_encode(const char *s)
 
 	/* each input char can expand to at most 3 chars */
 	buf_size = (strlen(s) * 3) + 1;
-	buf = (char *) malloc(buf_size);
 
+	buf = (char *) malloc(buf_size);
 	if (buf) {
 		char c;
 		char * p = buf;
@@ -319,7 +324,11 @@ char *url_encode(const char *s)
 			const char *replace_with = url_code_map[(unsigned char) c];
 			if (*replace_with != '\0') {
 				const size_t bytes_written = (size_t)(p - buf);
-				//assert(bytes_written < buf_size);
+
+				if (bytes_written >= buf_size) {
+					free(buf);
+					return NULL;
+				}
 				p += strlcpy(p, replace_with, buf_size - bytes_written);
 			} else {
 				*p++ = c;
@@ -327,8 +336,6 @@ char *url_encode(const char *s)
 		}
 
 		*p = '\0';
-
-		//assert(strlen(buf) < buf_size);
 	}
 
 	return(buf);
@@ -452,7 +459,7 @@ static void longhorn_create_clid_name(nfs_client_id_t *clientid)
 static int longhorn_recov_init(void)
 {
 	char host[NI_MAXHOST];
-	char payload[NI_MAXHOST << 1];
+	char payload[PAYLOAD_MAX];
 	char *response = NULL;
 	size_t response_size = 0;
 	char *version = NULL;
@@ -467,11 +474,13 @@ static int longhorn_recov_init(void)
 		return -errno;
 	}
 
-	LogEvent(COMPONENT_CLIENTID, "Initialize recovery backend for server host %s", host);
+	LogEvent(COMPONENT_CLIENTID, "Initialize recovery backend '%s'", host);
 
 	version = generate_random_string(VERSION_BYTES);
 	if (!version) {
-		LogEvent(COMPONENT_CLIENTID, "failed to generate version id: %s", strerror(errno));
+		LogEvent(COMPONENT_CLIENTID,
+				 "Failed to generate random string: %s (%d)",
+				 strerror(errno), errno);
 		return -errno;
 	}
 	memcpy(v4_recov_version, version, VERSION_BYTES + 1);
@@ -483,6 +492,7 @@ static int longhorn_recov_init(void)
 		payload, strlen(payload) + 1,
 		&response, &response_size);
 	if (res != 0) {
+		LogFatal(COMPONENT_CLIENTID, "HTTP call error: res=%d (%s)", res, response);
 		return -EINVAL;
 	}
 
@@ -492,8 +502,8 @@ static int longhorn_recov_init(void)
 static void longhorn_recov_end_grace(void)
 {
 	char host[NI_MAXHOST];
-	char url[PATH_MAX];
-	char payload[NI_MAXHOST << 1];
+	char url[URL_MAX];
+	char payload[PAYLOAD_MAX];
 	char *response = NULL;
 	size_t response_size = 0;
 	int err = 0;
@@ -507,20 +517,23 @@ static void longhorn_recov_end_grace(void)
 	}
 
 	LogEvent(COMPONENT_CLIENTID,
-			 "End grace for server host %s with version %s",
+			 "End grace for recovery backend '%s' with version %s",
 			 host, v4_recov_version);
 
 	snprintf(url, sizeof(url), "%s/%s", LONGHORN_RECOVERY_BACKEND_URL, host);
 	snprintf(payload, sizeof(payload), "{\"version\": \"%s\"}", v4_recov_version);
 
-	http_call(HTTP_PUT, url, payload, strlen(payload) + 1, &response, &response_size);
+	res = http_call(HTTP_PUT, url, payload, strlen(payload) + 1, &response, &response_size);
+	if (res != 0) {
+		LogFatal(COMPONENT_CLIENTID, "HTTP call error: res=%d (%s)", res, response);
+	}
 }
 
 static void longhorn_add_clid(nfs_client_id_t *clientid)
 {
 	char host[NI_MAXHOST];
-	char url[PATH_MAX];
-	char payload[NI_MAXHOST << 1];
+	char url[URL_MAX];
+	char payload[PAYLOAD_MAX];
 	char *response = NULL;
 	size_t response_size = 0;
 	char *encoded_cid_recov_tag = NULL;
@@ -538,21 +551,24 @@ static void longhorn_add_clid(nfs_client_id_t *clientid)
 	encoded_cid_recov_tag = url_encode(clientid->cid_recov_tag);
 
 	LogEvent(COMPONENT_CLIENTID,
-			 "Add client %s to server host %s with version %s",
+			 "Add client %s to recovery backend %s with version %s",
 			 clientid->cid_recov_tag, host, v4_recov_version);
 
 	snprintf(url, sizeof(url), "%s/%s/%s",
 		LONGHORN_RECOVERY_BACKEND_URL, host, encoded_cid_recov_tag);
 	snprintf(payload, sizeof(payload), "{\"version\": \"%s\"}", v4_recov_version);
 
-	http_call(HTTP_PUT, url, payload, strlen(payload) + 1, &response, &response_size);
+	res = http_call(HTTP_PUT, url, payload, strlen(payload) + 1, &response, &response_size);
+	if (res != 0) {
+		LogFatal(COMPONENT_CLIENTID, "HTTP call error: res=%d (%s)", res, response);
+	}
 }
 
 static void longhorn_rm_clid(nfs_client_id_t *clientid)
 {
 	char host[NI_MAXHOST];
-	char url[PATH_MAX];
-	char payload[NI_MAXHOST << 1];
+	char url[URL_MAX];
+	char payload[PAYLOAD_MAX;
 	char *response = NULL;
 	size_t response_size = 0;
 	char *encoded_cid_recov_tag = NULL;
@@ -570,7 +586,7 @@ static void longhorn_rm_clid(nfs_client_id_t *clientid)
 	clientid->cid_recov_tag = NULL;
 
 	LogEvent(COMPONENT_CLIENTID,
-			 "Remove client %s from server host %s (%s)",
+			 "Remove client %s from recovery backend %s (%s)",
 			 clientid->cid_recov_tag, host, encoded_cid_recov_tag);
 
 	snprintf(url, sizeof(url), "%s/%s/%s",
@@ -578,7 +594,10 @@ static void longhorn_rm_clid(nfs_client_id_t *clientid)
 
 	snprintf(payload, sizeof(payload), "{}");
 
-	http_call(HTTP_DELETE, url, payload, strlen(payload) + 1, &response, &response_size);
+	res = http_call(HTTP_DELETE, url, payload, strlen(payload) + 1, &response, &response_size);
+	if (res != 0) {
+		LogFatal(COMPONENT_CLIENTID, "HTTP call error: res=%d (%s)", res, response);
+	}
 }
 
 static int read_clids(char *response, add_clid_entry_hook add_clid_entry)
@@ -588,17 +607,13 @@ static int read_clids(char *response, add_clid_entry_hook add_clid_entry)
 		
 		obj = json_tokener_parse(response);
 		if (!obj) {
-			LogEvent(COMPONENT_CLIENTID,
-					 "Failed to parse \"%s\": %s",
-					 response, strerror(errno));
+			LogEvent(COMPONENT_CLIENTID, "Failed to parse \"%s\": %s", response, strerror(errno));
 			return -1;
 		}
 
 		clients_obj = json_object_object_get(obj, "clients");
 		if (!clients_obj) {
-			LogEvent(COMPONENT_CLIENTID,
-					 "Failed to parse get clients object: %s",
-					 strerror(errno));
+			LogEvent(COMPONENT_CLIENTID, "Failed to get clients object: %s", strerror(errno));
 			return -1;
 		}
 
@@ -610,17 +625,13 @@ static int read_clids(char *response, add_clid_entry_hook add_clid_entry)
 			
 			obj = json_object_array_get_idx(clients_obj, i);
 			if (!obj) {
-				LogEvent(COMPONENT_CLIENTID,
-						 "Failed to parse get client object: %s",
-						 strerror(errno));
+				LogEvent(COMPONENT_CLIENTID, "Failed get client object: %s", strerror(errno));
 				return -1;
 			}
 
         	clid = json_object_get_string(obj);
 			ent = add_clid_entry((char *)clid);
-			LogEvent(COMPONENT_CLIENTID,
-					 "added %s to clid list",
-					 ent->cl_name);
+			LogEvent(COMPONENT_CLIENTID, "Added %s to clid list", ent->cl_name);
 		}
 
 		json_object_put(obj);
@@ -632,8 +643,8 @@ static void longhorn_read_recov_clids(nfs_grace_start_t *gsp,
 				  add_rfh_entry_hook add_rfh_entry)
 {
 	char host[NI_MAXHOST];
-	char url[PATH_MAX];
-	char payload[NI_MAXHOST << 1];
+	char url[URL_MAX];
+	char payload[PAYLOAD_MAX];
 	char *response = NULL;
 	size_t response_size = 0;
 	int err = 0;
@@ -646,18 +657,20 @@ static void longhorn_read_recov_clids(nfs_grace_start_t *gsp,
 		return;
 	}
 
-	LogEvent(COMPONENT_CLIENTID,
-			 "Read clients from recovery backend %s",
-			 host);
+	LogEvent(COMPONENT_CLIENTID, "Read clients from recovery backend %s", host);
 
 	snprintf(url, sizeof(url), "%s/%s",
 		LONGHORN_RECOVERY_BACKEND_URL, host);
 
 	snprintf(payload, sizeof(payload), "{}");
 
-	http_call(HTTP_GET, url, payload, strlen(payload) + 1, &response, &response_size);
-	LogEvent(COMPONENT_CLIENTID, "response from recovery backend service: %s", response);
+	res = http_call(HTTP_GET, url, payload, strlen(payload) + 1, &response, &response_size);
+	if (res != 0) {
+		LogFatal(COMPONENT_CLIENTID, "HTTP call error: res=%d (%s)", res, response);
+		return;
+	}
 
+	LogDebug(COMPONENT_CLIENTID, "Response from recovery backend service: %s", response);
 	read_clids(response, add_clid_entry);
 }
 
