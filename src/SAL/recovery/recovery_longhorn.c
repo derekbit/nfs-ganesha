@@ -550,6 +550,7 @@ static void longhorn_add_clid(nfs_client_id_t *clientid)
 
 	longhorn_create_clid_name(clientid);
 	encoded_cid_recov_tag = url_encode(clientid->cid_recov_tag);
+	assert(encoded_cid_recov_tag != NULL);
 
 	LogEvent(COMPONENT_CLIENTID,
 			 "Add client %s to recovery backend %s with version %s",
@@ -558,6 +559,9 @@ static void longhorn_add_clid(nfs_client_id_t *clientid)
 	snprintf(url, sizeof(url), "%s/%s/%s",
 		LONGHORN_RECOVERY_BACKEND_URL, host, encoded_cid_recov_tag);
 	snprintf(payload, sizeof(payload), "{\"version\": \"%s\"}", v4_recov_version);
+
+	free(encoded_cid_recov_tag);
+	encoded_cid_recov_tag = NULL;
 
 	res = http_call(HTTP_PUT, url, payload, strlen(payload) + 1, &response, &response_size);
 	if (res != 0) {
