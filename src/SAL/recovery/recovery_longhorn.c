@@ -594,8 +594,7 @@ static void longhorn_rm_clid(nfs_client_id_t *clientid)
 
 	snprintf(url, sizeof(url), "%s/%s/%s",
 		LONGHORN_RECOVERY_BACKEND_URL, host, encoded_cid_recov_tag);
-
-	snprintf(payload, sizeof(payload), "{}");
+	snprintf(payload, sizeof(payload), "{\"version\": \"%s\"}", v4_recov_version);
 
 	res = http_call(HTTP_DELETE, url, payload, strlen(payload) + 1, &response, &response_size);
 	if (res != 0) {
@@ -666,7 +665,7 @@ static void longhorn_read_recov_clids(nfs_grace_start_t *gsp,
 	snprintf(url, sizeof(url), "%s/%s",
 		LONGHORN_RECOVERY_BACKEND_URL, host);
 
-	snprintf(payload, sizeof(payload), "{}");
+	snprintf(payload, sizeof(payload), "{\"version\": \"%s\"}", v4_recov_version);
 
 	res = http_call(HTTP_GET, url, payload, strlen(payload) + 1, &response, &response_size);
 	if (res != 0) {
