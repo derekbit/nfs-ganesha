@@ -507,6 +507,7 @@ static void longhorn_recov_end_grace(void)
 	char *response = NULL;
 	size_t response_size = 0;
 	int err = 0;
+	int res = 0;
 
 	err = gethostname(host, sizeof(host));
 	if (err) {
@@ -568,11 +569,12 @@ static void longhorn_rm_clid(nfs_client_id_t *clientid)
 {
 	char host[NI_MAXHOST];
 	char url[URL_MAX];
-	char payload[PAYLOAD_MAX;
+	char payload[PAYLOAD_MAX];
 	char *response = NULL;
 	size_t response_size = 0;
 	char *encoded_cid_recov_tag = NULL;
 	int err = 0;
+	int res = 0;
 
 	err = gethostname(host, sizeof(host));
 	if (err) {
@@ -648,6 +650,7 @@ static void longhorn_read_recov_clids(nfs_grace_start_t *gsp,
 	char *response = NULL;
 	size_t response_size = 0;
 	int err = 0;
+	int res = 0;
 
 	err = gethostname(host, sizeof(host));
 	if (err) {
