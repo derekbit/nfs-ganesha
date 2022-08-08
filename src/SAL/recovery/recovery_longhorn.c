@@ -477,16 +477,15 @@ static int longhorn_recov_init(void)
 	LogEvent(COMPONENT_CLIENTID, "Initialize recovery backend '%s'", host);
 
 	version = generate_random_string(VERSION_BYTES);
-	if (!version) {
-		LogEvent(COMPONENT_CLIENTID,
-				 "Failed to generate random string: %s (%d)",
-				 strerror(errno), errno);
-		return -errno;
-	}
+	assert(version != NULL);
+
 	memcpy(v4_recov_version, version, VERSION_BYTES + 1);
 
 	snprintf(payload, sizeof(payload), "{\"hostname\": \"%s\", \"version\": \"%s\"}",
 		host, v4_recov_version);
+
+	free(version);
+	version = NULL;
 
 	res = http_call(HTTP_POST, LONGHORN_RECOVERY_BACKEND_URL,
 		payload, strlen(payload) + 1,
@@ -586,6 +585,8 @@ static void longhorn_rm_clid(nfs_client_id_t *clientid)
 	}
 
 	encoded_cid_recov_tag = url_encode(clientid->cid_recov_tag);
+	assert(encoded_cid_recov_tag != NULL);
+
 	clientid->cid_recov_tag = NULL;
 
 	LogEvent(COMPONENT_CLIENTID,
@@ -595,6 +596,9 @@ static void longhorn_rm_clid(nfs_client_id_t *clientid)
 	snprintf(url, sizeof(url), "%s/%s/%s",
 		LONGHORN_RECOVERY_BACKEND_URL, host, encoded_cid_recov_tag);
 	snprintf(payload, sizeof(payload), "{\"version\": \"%s\"}", v4_recov_version);
+
+	free(encoded_cid_recov_tag);
+	encoded_cid_recov_tag = NULL;
 
 	res = http_call(HTTP_DELETE, url, payload, strlen(payload) + 1, &response, &response_size);
 	if (res != 0) {
@@ -679,6 +683,39 @@ static void longhorn_read_recov_clids(nfs_grace_start_t *gsp,
 
 static void longhorn_add_revoke_fh(nfs_client_id_t *delr_clid, nfs_fh4 *delr_handle)
 {
+	char rhdlstr[NAME_MAX];
+	int rhdlstr_len;
+	char *encoded_cid_recov_tag = NULL;
+	int fd;
+	int retval;
+
+	/* Convert nfs_fh4_val into base64 encoded string */
+	retval = base64url_encode(delr_handle->nfs_fh4_val,
+							  delr_handle->nfs_fh4_len,
+							  rhdlstr, sizeof(rhdlstr));
+	assert(retval != -1);
+	rhdlstr_len = strlen(rhdlstr);
+
+	encoded_cid_recov_tag = url_encode(clientid->cid_recov_tag);
+	assert(encoded_cid_recov_tag != NULL);
+
+	encoded_rhdlstr = url_encode(clientid->cid_recov_tag);
+	assert(encoded_rhdlstr != NULL);
+
+	snprintf(url, sizeof(url), "%s/%s/%s/%s/%s",
+		LONGHORN_RECOVERY_BACKEND_URL, host, encoded_cid_recov_tag, encoded_rhdlstr);
+	snprintf(payload, sizeof(payload), "{\"version\": \"%s\"}", v4_recov_version);
+
+	free(encoded_cid_recov_tag);
+	encoded_cid_recov_tag = NULL;
+
+	free(encoded_rhdlstr);
+	encoded_rhdlstr = NULL;
+
+	res = http_call(HTTP_PUT, url, payload, strlen(payload) + 1, &response, &response_size);
+	if (res != 0) {
+		LogFatal(COMPONENT_CLIENTID, "HTTP call error: res=%d (%s)", res, response);
+	}
 }
 
 static struct nfs4_recovery_backend longhorn_backend = {
