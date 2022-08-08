@@ -1057,6 +1057,12 @@ if (CMAKE_MAJOR_VERSION VERSION_EQUAL 3 AND CMAKE_MINOR_VERSION VERSION_GREATER 
 endif(CMAKE_MAJOR_VERSION VERSION_EQUAL 3 AND CMAKE_MINOR_VERSION VERSION_GREATER 14)
 check_symbol_exists(urcu_ref_get_unless_zero urcu/ref.h HAVE_URCU_REF_GET_UNLESS_ZERO)
 
+find_path(LIBCURL_INC curl/curl.h)
+find_library(LIBCURL_LIB curl)
+
+find_path(LIBJSONC_INC json/json.h)
+FIND_LIBRARY(LIBJSONC_LIB json-c json)
+
 # All the plumbing in the basement
 set(SYSTEM_LIBRARIES
   ${NTIRPC_LIBRARY}
@@ -1066,6 +1072,8 @@ set(SYSTEM_LIBRARIES
   ${CMAKE_THREAD_LIBS_INIT}
   ${LIBRT}
   ${LIBURCU}
+  ${LIBCURL_LIB}
+  ${LIBJSONC_LIB}
 )
 
 # Config file; make sure it doesn't clobber an existing one
