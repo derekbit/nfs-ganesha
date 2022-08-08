@@ -539,6 +539,7 @@ static void longhorn_add_clid(nfs_client_id_t *clientid)
 	size_t response_size = 0;
 	char *encoded_cid_recov_tag = NULL;
 	int err = 0;
+	int res = 0;
 
 	err = gethostname(host, sizeof(host));
 	if (err) {
