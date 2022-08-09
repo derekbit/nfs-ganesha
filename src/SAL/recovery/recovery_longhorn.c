@@ -612,6 +612,8 @@ static int read_clids(char *response, add_clid_entry_hook add_clid_entry)
 {
         struct json_object *obj = NULL, *clients_obj = NULL;
 		size_t num_clids = 0;
+
+		LogEvent(COMPONENT_CLIENTID, "response=%s", response)
 		
 		obj = json_tokener_parse(response);
 		if (!obj) {
