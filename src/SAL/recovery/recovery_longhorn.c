@@ -612,19 +612,20 @@ static int read_clids(char *response, add_clid_entry_hook add_clid_entry)
 {
         struct json_object *obj = NULL, *clients_obj = NULL;
 		size_t num_clids = 0;
+		int error = -1;
 
-		LogEvent(COMPONENT_CLIENTID, "response=%s", response)
+		LogEvent(COMPONENT_CLIENTID, "response=%s", response);
 		
 		obj = json_tokener_parse(response);
 		if (!obj) {
 			LogEvent(COMPONENT_CLIENTID, "Failed to parse \"%s\": %s", response, strerror(errno));
-			return -1;
+			goto end;
 		}
 
 		clients_obj = json_object_object_get(obj, "clients");
 		if (!clients_obj) {
 			LogEvent(COMPONENT_CLIENTID, "Failed to get clients object: %s", strerror(errno));
-			return -1;
+			goto end;
 		}
 
 		num_clids = json_object_array_length(clients_obj);
@@ -636,7 +637,7 @@ static int read_clids(char *response, add_clid_entry_hook add_clid_entry)
 			obj = json_object_array_get_idx(clients_obj, i);
 			if (!obj) {
 				LogEvent(COMPONENT_CLIENTID, "Failed get client object: %s", strerror(errno));
-				return -1;
+				goto end;
 			}
 
         	clid = json_object_get_string(obj);
@@ -644,8 +645,10 @@ static int read_clids(char *response, add_clid_entry_hook add_clid_entry)
 			LogEvent(COMPONENT_CLIENTID, "Added %s to clid list", ent->cl_name);
 		}
 
+		error = 0;
+end:
 		json_object_put(obj);
-		return 0;
+		return error;
 }
 
 static void longhorn_read_recov_clids(nfs_grace_start_t *gsp,
