@@ -517,7 +517,7 @@ static void longhorn_recov_end_grace(void)
 	}
 
 	LogEvent(COMPONENT_CLIENTID,
-			 "End grace for recovery backend '%s' with version %s",
+			 "End grace for recovery backend '%s' version %s",
 			 host, v4_recov_version);
 
 	snprintf(url, sizeof(url), "%s/%s", LONGHORN_RECOVERY_BACKEND_URL, host);
@@ -533,7 +533,7 @@ static void longhorn_add_clid(nfs_client_id_t *clientid)
 {
 	char host[NI_MAXHOST];
 	char url[URL_MAX];
-	char payload[PAYLOAD_MAX];
+	char *payload = "{}";
 	char *response = NULL;
 	size_t response_size = 0;
 	char *encoded_cid_recov_tag = NULL;
@@ -553,12 +553,11 @@ static void longhorn_add_clid(nfs_client_id_t *clientid)
 	assert(encoded_cid_recov_tag != NULL);
 
 	LogEvent(COMPONENT_CLIENTID,
-			 "Add client %s to recovery backend %s with version %s",
-			 clientid->cid_recov_tag, host, v4_recov_version);
+			 "Add client '%s' to recovery backend %s",
+			 clientid->cid_recov_tag, host);
 
 	snprintf(url, sizeof(url), "%s/%s/%s",
 		LONGHORN_RECOVERY_BACKEND_URL, host, encoded_cid_recov_tag);
-	snprintf(payload, sizeof(payload), "{\"version\": \"%s\"}", v4_recov_version);
 
 	free(encoded_cid_recov_tag);
 	encoded_cid_recov_tag = NULL;
@@ -573,7 +572,7 @@ static void longhorn_rm_clid(nfs_client_id_t *clientid)
 {
 	char host[NI_MAXHOST];
 	char url[URL_MAX];
-	char payload[PAYLOAD_MAX];
+	char *payload = "{}";
 	char *response = NULL;
 	size_t response_size = 0;
 	char *encoded_cid_recov_tag = NULL;
@@ -594,12 +593,11 @@ static void longhorn_rm_clid(nfs_client_id_t *clientid)
 	clientid->cid_recov_tag = NULL;
 
 	LogEvent(COMPONENT_CLIENTID,
-			 "Remove client %s from recovery backend %s (%s)",
+			 "Remove client '%s' from recovery backend %s (%s)",
 			 clientid->cid_recov_tag, host, encoded_cid_recov_tag);
 
 	snprintf(url, sizeof(url), "%s/%s/%s",
 		LONGHORN_RECOVERY_BACKEND_URL, host, encoded_cid_recov_tag);
-	snprintf(payload, sizeof(payload), "{\"version\": \"%s\"}", v4_recov_version);
 
 	free(encoded_cid_recov_tag);
 	encoded_cid_recov_tag = NULL;
@@ -685,7 +683,7 @@ static void longhorn_add_revoke_fh(nfs_client_id_t *delr_clid, nfs_fh4 *delr_han
 {
 	char host[NI_MAXHOST];
 	char url[URL_MAX];
-	char payload[PAYLOAD_MAX];
+	char *payload = "{}";
 	char *response = NULL;
 	size_t response_size = 0;
 	char rhdlstr[NAME_MAX];
@@ -719,7 +717,6 @@ static void longhorn_add_revoke_fh(nfs_client_id_t *delr_clid, nfs_fh4 *delr_han
 
 	snprintf(url, sizeof(url), "%s/%s/%s/%s/%s",
 		LONGHORN_RECOVERY_BACKEND_URL, host, encoded_cid_recov_tag, encoded_rhdlstr);
-	snprintf(payload, sizeof(payload), "{\"version\": \"%s\"}", v4_recov_version);
 
 	free(encoded_cid_recov_tag);
 	encoded_cid_recov_tag = NULL;
