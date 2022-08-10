@@ -581,7 +581,6 @@ static void longhorn_rm_clid(nfs_client_id_t *clientid)
 {
 	char host[NI_MAXHOST];
 	char url[URL_MAX];
-	char payload[PAYLOAD_MAX];
 	char *response = NULL;
 	size_t response_size = 0;
 	char *encoded_cid_recov_tag = NULL;
@@ -608,13 +607,11 @@ static void longhorn_rm_clid(nfs_client_id_t *clientid)
 	snprintf(url, sizeof(url), "%s/%s/%s",
 		LONGHORN_RECOVERY_BACKEND_URL, host, encoded_cid_recov_tag);
 
-	snprintf(payload, sizeof(payload), "{\"version\": \"%s\"}", recov_version);
-
 	free(encoded_cid_recov_tag);
 	encoded_cid_recov_tag = NULL;
 
 	PTHREAD_RWLOCK_wrlock(&recov_lock);
-	res = http_call(HTTP_DELETE, url, payload, strlen(payload) + 1, &response, &response_size);
+	res = http_call(HTTP_DELETE, url, NULL, 0, &response, &response_size);
 	PTHREAD_RWLOCK_unlock(&recov_lock);
 	if (res != 0) {
 		LogFatal(COMPONENT_CLIENTID, "HTTP call error: res=%d (%s)", res, response);
