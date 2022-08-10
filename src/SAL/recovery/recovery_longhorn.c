@@ -581,7 +581,7 @@ static void longhorn_rm_clid(nfs_client_id_t *clientid)
 {
 	char host[NI_MAXHOST];
 	char url[URL_MAX];
-	char *payload = "{}";
+	char payload[PAYLOAD_MAX];
 	char *response = NULL;
 	size_t response_size = 0;
 	char *encoded_cid_recov_tag = NULL;
@@ -703,7 +703,7 @@ static void longhorn_add_revoke_fh(nfs_client_id_t *delr_clid, nfs_fh4 *delr_han
 {
 	char host[NI_MAXHOST];
 	char url[URL_MAX];
-	char *payload = "{}";
+	char payload[PAYLOAD_MAX];
 	char *response = NULL;
 	size_t response_size = 0;
 	char rhdlstr[NAME_MAX];
