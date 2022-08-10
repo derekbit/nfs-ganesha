@@ -624,7 +624,8 @@ static int read_clids(char *response, add_clid_entry_hook add_clid_entry)
 
 		clients_obj = json_object_object_get(obj, "clients");
 		if (!clients_obj) {
-			LogEvent(COMPONENT_CLIENTID, "Failed to get clients object: %s", strerror(errno));
+			error = 0;
+			LogEvent(COMPONENT_CLIENTID, "clients is empty");
 			goto end;
 		}
 
@@ -672,8 +673,8 @@ static void longhorn_read_recov_clids(nfs_grace_start_t *gsp,
 
 	LogEvent(COMPONENT_CLIENTID, "Read clients from recovery backend %s", host);
 
-	snprintf(url, sizeof(url), "%s/%s",
-		LONGHORN_RECOVERY_BACKEND_URL, host);
+	snprintf(url, sizeof(url), "%s/%s/%s",
+		LONGHORN_RECOVERY_BACKEND_URL, host, v4_recov_version);
 
 	res = http_call(HTTP_GET, url, NULL, 0, &response, &response_size);
 	if (res != 0) {
