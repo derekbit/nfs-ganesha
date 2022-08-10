@@ -673,8 +673,7 @@ static void longhorn_read_recov_clids(nfs_grace_start_t *gsp,
 
 	LogEvent(COMPONENT_CLIENTID, "Read clients from recovery backend %s", host);
 
-	snprintf(url, sizeof(url), "%s/%s/%s",
-		LONGHORN_RECOVERY_BACKEND_URL, host, v4_recov_version);
+	snprintf(url, sizeof(url), "%s/%s", LONGHORN_RECOVERY_BACKEND_URL, host);
 
 	res = http_call(HTTP_GET, url, NULL, 0, &response, &response_size);
 	if (res != 0) {
