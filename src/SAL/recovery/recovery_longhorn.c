@@ -31,7 +31,7 @@
 #include "bsd-base64.h"
 #include "client_mgr.h"
 #include "fsal.h"
-#include "recovery_fs.h"
+#include "common_utils.h"
 #include <libgen.h>
 #include <curl/curl.h>
 #include <json-c/json.h>
@@ -42,6 +42,7 @@
 #define LONGHORN_RECOVERY_BACKEND_URL "http://longhorn-recovery-backend:9600/v1/recoverybackend"
 
 static char recov_version[NAME_MAX];
+static pthread_rwlock_t recov_lock = PTHREAD_RWLOCK_INITIALIZER;
 
 typedef enum {
 	HTTP_GET = 0,
@@ -487,9 +488,11 @@ static int longhorn_recov_init(void)
 	free(version);
 	version = NULL;
 
+	PTHREAD_RWLOCK_wrlock(&recov_lock);
 	res = http_call(HTTP_POST, LONGHORN_RECOVERY_BACKEND_URL,
 		payload, strlen(payload) + 1,
 		&response, &response_size);
+	PTHREAD_RWLOCK_unlock(&recov_lock);
 	if (res != 0) {
 		LogFatal(COMPONENT_CLIENTID, "HTTP call error: res=%d (%s)", res, response);
 		return -EINVAL;
@@ -523,7 +526,9 @@ static void longhorn_recov_end_grace(void)
 	snprintf(url, sizeof(url), "%s/%s", LONGHORN_RECOVERY_BACKEND_URL, host);
 	snprintf(payload, sizeof(payload), "{\"version\": \"%s\"}", recov_version);
 
+	PTHREAD_RWLOCK_wrlock(&recov_lock);
 	res = http_call(HTTP_PUT, url, payload, strlen(payload) + 1, &response, &response_size);
+	PTHREAD_RWLOCK_unlock(&recov_lock);
 	if (res != 0) {
 		LogFatal(COMPONENT_CLIENTID, "HTTP call error: res=%d (%s)", res, response);
 	}
@@ -562,7 +567,9 @@ static void longhorn_add_clid(nfs_client_id_t *clientid)
 	free(encoded_cid_recov_tag);
 	encoded_cid_recov_tag = NULL;
 
+	PTHREAD_RWLOCK_wrlock(&recov_lock);
 	res = http_call(HTTP_PUT, url, payload, strlen(payload) + 1, &response, &response_size);
+	PTHREAD_RWLOCK_unlock(&recov_lock);
 	if (res != 0) {
 		LogFatal(COMPONENT_CLIENTID, "HTTP call error: res=%d (%s)", res, response);
 	}
@@ -602,7 +609,9 @@ static void longhorn_rm_clid(nfs_client_id_t *clientid)
 	free(encoded_cid_recov_tag);
 	encoded_cid_recov_tag = NULL;
 
+	PTHREAD_RWLOCK_wrlock(&recov_lock);
 	res = http_call(HTTP_DELETE, url, payload, strlen(payload) + 1, &response, &response_size);
+	PTHREAD_RWLOCK_unlock(&recov_lock);
 	if (res != 0) {
 		LogFatal(COMPONENT_CLIENTID, "HTTP call error: res=%d (%s)", res, response);
 	}
@@ -675,7 +684,9 @@ static void longhorn_read_recov_clids(nfs_grace_start_t *gsp,
 
 	snprintf(url, sizeof(url), "%s/%s", LONGHORN_RECOVERY_BACKEND_URL, host);
 
+	PTHREAD_RWLOCK_rdlock(&recov_lock);
 	res = http_call(HTTP_GET, url, NULL, 0, &response, &response_size);
+	PTHREAD_RWLOCK_unlock(&recov_lock);
 	if (res != 0) {
 		LogFatal(COMPONENT_CLIENTID, "HTTP call error: res=%d (%s)", res, response);
 		return;
@@ -729,7 +740,9 @@ static void longhorn_add_revoke_fh(nfs_client_id_t *delr_clid, nfs_fh4 *delr_han
 	free(encoded_rhdlstr);
 	encoded_rhdlstr = NULL;
 
+	PTHREAD_RWLOCK_wrlock(&recov_lock);
 	res = http_call(HTTP_PUT, url, payload, strlen(payload) + 1, &response, &response_size);
+	PTHREAD_RWLOCK_unlock(&recov_lock);
 	if (res != 0) {
 		LogFatal(COMPONENT_CLIENTID, "HTTP call error: res=%d (%s)", res, response);
 	}
